@@ -1,6 +1,6 @@
 
 # Arquitectura Técnica Propuesta para Clasificación Batch de Mensajes de Usuario
-![Arquitectura](.Arquitectura_NLP.jpg)
+![Arquitectura](https://github.com/britop12/Prueba-Nequi/blob/main/Arquitectura/Arquitectura_NLP.jpg?raw=true)
 
 ## **1. Ingesta y Gobierno de Datos**
 
