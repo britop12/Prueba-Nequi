@@ -1,6 +1,6 @@
 
 # Arquitectura Técnica Propuesta para Clasificación Batch de Mensajes de Usuario
-![Arquitectura](Arquitectura_NLP.png)
+![Arquitectura](Arquitectura/Arquitectura_NLP.jpg)
 
 ## **1. Ingesta y Gobierno de Datos**
 
