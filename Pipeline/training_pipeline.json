@@ -1,0 +1,111 @@
+{
+  "Comment": "Pipeline ML Nequi – Glue ▸ Train ▸ Eval ▸ (Register) ▸ CreateTransformJob / Alert",
+  "StartAt": "Initialization",
+  "States": {
+    "Initialization": {
+      "Type": "Pass",
+      "Next": "GluePreprocess"
+    },
+    "GluePreprocess": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "<GLUE_JOB_NAME>",
+        "Arguments": {
+          "--S3_INPUT_PATH": "s3://<RAW_BUCKET>/dataset.csv",
+          "--S3_OUTPUT_PATH": "s3://<PROCESSED_BUCKET>/",
+          "--RUN_DATE.$": "$$.Execution.StartTime",
+          "--RUN_ID.$": "$$.Execution.Id"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Glue.ServiceException"
+          ],
+          "IntervalSeconds": 60,
+          "MaxAttempts": 3
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "NotifyFail"
+        }
+      ],
+      "Next": "StartPipelineExecution"
+    },
+    "StartPipelineExecution": {
+      "Type": "Task",
+      "Parameters": {
+        "ClientRequestToken": "MyData",
+        "PipelineName": "MyData"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:sagemaker:startPipelineExecution",
+      "Next": "EvalMetricsLambda"
+    },
+    "EvalMetricsLambda": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "testLambda",
+        "modelArtifacts.$": "$.ModelArtifacts.S3ModelArtifacts"
+      },
+      "Next": "MetricCheck"
+    },
+    "MetricCheck": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.status",
+          "StringEquals": "OK",
+          "Next": "RegisterModel"
+        }
+      ],
+      "Default": "NotifyFail"
+    },
+    "RegisterModel": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sagemaker:createModelPackage.sync",
+      "Parameters": {
+        "ModelPackageGroupName": "nequi-risk-nlp-model-group",
+        "ModelPackageDescription.$": "States.Format('Auto-reg {}', $$.Execution.Id)",
+        "InferenceSpecification": {
+          "Containers": [
+            {
+              "Image": "683313688378.dkr.ecr.<REGION>.amazonaws.com/sagemaker-scikit-learn:1.2-1-cpu-py3",
+              "ModelDataUrl.$": "$.model_s3_uri"
+            }
+          ],
+          "SupportedContentTypes": [
+            "text/csv"
+          ],
+          "SupportedResponseMIMETypes": [
+            "text/csv"
+          ]
+        },
+        "ModelMetrics": {
+          "ModelStatistics": {
+            "S3Uri.$": "$.metrics_s3_uri",
+            "ContentType": "application/json"
+          }
+        }
+      },
+      "End": true
+    },
+    "NotifyFail": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "<SNS_TOPIC_ARN>",
+        "Message": {
+          "Input.$": "$",
+          "Reason": "Modelo no pasó umbral de calidad"
+        }
+      },
+      "End": true
+    }
+  }
+}

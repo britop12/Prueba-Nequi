@@ -1,0 +1,96 @@
+{
+  "Comment": "Pipeline de Inferencia Batch ML Nequi",
+  "StartAt": "Initialization",
+  "States": {
+    "Initialization": {
+      "Type": "Pass",
+      "Result": {
+        "run_date.$": "$$.Execution.StartTime",
+        "run_id.$": "$$.Execution.Id"
+      },
+      "ResultPath": "$.vars",
+      "Next": "Glue StartJobRun"
+    },
+    "Glue StartJobRun": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun",
+      "Parameters": {
+        "JobName": "myJobName"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Glue.ServiceException"
+          ],
+          "IntervalSeconds": 60,
+          "MaxAttempts": 3
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "NotifyFail"
+        }
+      ],
+      "Next": "GetApprovedModel"
+    },
+    "GetApprovedModel": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "Test",
+        "ModelPackageGroupName": "nequi-risk-nlp"
+      },
+      "ResultPath": "$.model_info",
+      "Next": "SageMakerCreateTransformJob"
+    },
+    "SageMakerCreateTransformJob": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sagemaker:createTransformJob.sync",
+      "Parameters": {
+        "ModelName.$": "$.model_info.ModelName",
+        "TransformInput": {
+          "DataSource": {
+            "S3DataSource": {
+              "S3DataType": "S3Prefix",
+              "S3Uri": "s3://<PROCESSED_BUCKET>/inference-batch/"
+            }
+          },
+          "ContentType": "text/csv",
+          "SplitType": "Line"
+        },
+        "TransformOutput": {
+          "S3OutputPath.$": "States.Format('s3://<PREDICTIONS_BUCKET>/batch-inference/{}/{}', $.vars.run_date, $.vars.run_id)"
+        },
+        "TransformResources": {
+          "InstanceCount": 1,
+          "InstanceType": "ml.m5.large"
+        },
+        "TransformJobName.$": "States.Format('nequi-infer-{}', $.vars.run_id)"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "NotifyFail"
+        }
+      ],
+      "End": true
+    },
+    "NotifyFail": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "<SNS_TOPIC_ARN>",
+        "Message": {
+          "Input.$": "$",
+          "Reason": "Fallo el batch de inferencia"
+        }
+      },
+      "End": true
+    }
+  }
+}

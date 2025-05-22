@@ -1,0 +1,6 @@
+
+Preprocessing job run: 0
+Run date: 2025-05-21 03:15:48
+Source S3: S3://your-bucket-name/raw_data/twcs.csv
+Output S3: S3://your-bucket-name/processed_data/
+Total input records: 1537844
