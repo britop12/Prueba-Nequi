@@ -2,9 +2,8 @@
 *Prueba técnica Ingeniero de Machine Learning Nequi 1.pdf
 
 # Varios
-*.csv
-*.parquet
-
+Preprocesamiento/twcs.csv
+output_with_predictions.parquet
 
 
 # Byte-compiled / optimized / DLL files

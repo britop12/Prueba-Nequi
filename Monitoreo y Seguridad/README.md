@@ -35,3 +35,21 @@ La seguridad del pipeline propuesto se asegura mediante una serie de controles a
 
 * Los modelos entrenados se almacenan y gestionan centralmente en  **SageMaker Model Registry** , que proporciona mecanismos integrados para asegurar la gobernanza, la gestión de versiones, aprobación manual o automática (mediante métricas validadas) y auditoría completa de cambios y aprobaciones. Por ejemplo, para desplegar en producción se puede usar Human-in-the-loop, para que apruebe el despliegue de un modelo.
 * Solo modelos explícitamente marcados como "Approved" pueden desplegarse en producción.
+
+## Alertas, Notificaciones y Automatización de Respuestas Correctivas
+
+Se utilizan mecanismos automatizados de respuesta para asegurar la estabilidad operativa continua:
+
+* Ante fallos en procesos críticos (Glue o SageMaker), el pipeline notifica de manera inmediata a través de AWS SNS con información del problema para una rápida intervención.
+* En caso de drift significativo detectado por SageMaker Model Monitor, se dispara automáticamente la regla configurada en Amazon EventBridge, iniciando el pipeline de reentrenamiento (Continuous Training), asegurando que el modelo se mantenga siempre actualizado y con rendimiento óptimo.
+
+## Complemento visual a la Arquitectura General
+
+La estrategia de monitoreo y seguridad descrita complementa directamente la arquitectura general ya propuesta (ver imagen adjunta: `Arquitectura_NLP.jpg`), asegurando la cobertura desde la ingesta inicial hasta la inferencia batch final.
+
+Los flujos automatizados de entrenamiento (`training_pipeline.png`) e inferencia (`inference_pipeline.png`) están especialmente diseñados para incorporar nativamente estas estrategias de monitoreo y seguridad, mostrando de forma visual clara la implementación de:
+
+* Versionado determinístico (variables `run_id` y `run_date`)
+* Observabilidad a través de SNS y CloudWatch Logs
+* Seguridad integrada mediante IAM roles específicos por tarea y usuario
+* Validaciones automáticas mediante funciones Lambda y métricas auditadas (Model Registry).

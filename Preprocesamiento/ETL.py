@@ -21,6 +21,7 @@ args = getResolvedOptions(sys.argv, [
 
 # Estructura de versionado en S3: processed/yyyy-mm-dd/job_run_id/
 run_date = args['RUN_DATE']  # yyyy-mm-dd
+# run_date = datetime.datetime.strptime(run_date, '%Y-%m-%d').strftime('%Y%m%d')
 job_run_id = args['JOB_RUN_ID'] if 'JOB_RUN_ID' in args else datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')
 s3_output_versioned = f"{args['S3_OUTPUT_PATH'].rstrip('/')}/{run_date}/{job_run_id}/"
 s3_log_versioned = f"{args['S3_LOG_PATH'].rstrip('/')}/{run_date}/{job_run_id}/"
